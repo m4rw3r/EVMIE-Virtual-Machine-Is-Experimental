@@ -2,8 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(TestProglang, 0.1, m4rw3r@gmail.com)
-AC_CONFIG_SRCDIR([src/Context.h])
+AC_INIT(EVMIE Virtual Machine Is Experimental, 0.1, m4rw3r@gmail.com)
+AC_CONFIG_SRCDIR([src/Value.h])
 AC_CONFIG_HEADER([config.h])
 
 # Checks for programs.
