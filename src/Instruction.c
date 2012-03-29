@@ -5,7 +5,7 @@
 
 #define return_typename(name) case name: return #name;
 
-char *Instruction_getTypeName(Instruction *instr)
+char *Instruction_getTypeName(const Instruction *const instr)
 {
 	switch(instr->type)
 	{
@@ -37,3 +37,5 @@ char *Instruction_getTypeName(Instruction *instr)
 			return "UNKNOWN";
 	}
 }
+
+#undef return_typename(name)

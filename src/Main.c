@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 #include "Value.h"
-#include "Context.h"
 #include "Instruction.h"
 #include "Eval.h"
 
@@ -24,33 +23,33 @@ const char *byte_to_binary(uint64_t x)
 
 int main()
 {
-	Context *ctx = malloc(sizeof(Context));
-	Context_init(ctx);
+	Frame *frame = malloc(sizeof(Frame));
+	Frame_init(frame);
 	
-	uint64_t varsum = Context_allocVariable(ctx);
-	uint64_t varn   = Context_allocVariable(ctx);
-	uint64_t vara   = Context_allocVariable(ctx);
-	uint64_t varb   = Context_allocVariable(ctx);
-	uint64_t vari   = Context_allocVariable(ctx);
+	uint64_t varsum = Frame_allocVariable(frame);
+	uint64_t varn   = Frame_allocVariable(frame);
+	uint64_t vara   = Frame_allocVariable(frame);
+	uint64_t varb   = Frame_allocVariable(frame);
+	uint64_t vari   = Frame_allocVariable(frame);
 	
 	Instruction instructions[] = {
-		{INS(SETTO),  varsum, Value_fromInt32(0).asBits,  NULL},
-		{INS(SETTO),  varn,   Value_fromInt32(20).asBits, NULL},
-		{INS(SETTO),  vara,   Value_fromInt32(0).asBits,  NULL},
-		{INS(SETTO),  varb,   Value_fromInt32(1).asBits,  NULL},
-		{INS(SETTO),  vari,   Value_fromInt32(0).asBits,  NULL},
-		{INS(IS_LT),  vari,   varn,                       NULL},
-		{INS(JMPZ),   0,      0,                          NULL},
-		{INS(VARADD), vari,   1,                          NULL},
-		{INS(ADD),    vara,   varb,                       NULL},
-		{INS(SETLV),  varsum, 0,                          NULL},
-		{INS(COPY),   varb,   vara,                       NULL},
-		{INS(COPY),   varsum, varb,                       NULL},
-		{INS(FETCH),  varsum, 0,                          NULL},
-		{INS(PRINT),  0,      0,                          NULL},
-		{INS(JMP),    0,      0,                          NULL},
-		{INS(FETCH),  varsum, 0,                          NULL},
-		{INS(PRINT),  0,      0,                          NULL},
+		{INS(SETTO),  {.asUInt = varsum}, {.asValue = Value_fromInt32(0) }, NULL},
+		{INS(SETTO),  {.asUInt = varn},   {.asValue = Value_fromInt32(20)}, NULL},
+		{INS(SETTO),  {.asUInt = vara},   {.asValue = Value_fromInt32(0) }, NULL},
+		{INS(SETTO),  {.asUInt = varb},   {.asValue = Value_fromInt32(1) }, NULL},
+		{INS(SETTO),  {.asUInt = vari},   {.asValue = Value_fromInt32(0) }, NULL},
+		{INS(IS_LT),  {.asUInt = vari},   {.asUInt  = varn},                NULL},
+		{INS(JMPZ),   {.asInt  = 9},      {.asInt   = 0},                   NULL},
+		{INS(VARADD), {.asUInt = vari},   {.asInt   = 1},                   NULL},
+		{INS(ADD),    {.asUInt = vara},   {.asUInt  = varb},                NULL},
+		{INS(SETLV),  {.asUInt = varsum}, {.asInt   = 0},                   NULL},
+		{INS(COPY),   {.asUInt = varb},   {.asUInt  = vara},                NULL},
+		{INS(COPY),   {.asUInt = varsum}, {.asUInt  = varb},                NULL},
+		{INS(FETCH),  {.asUInt = varsum}, {.asInt   = 0},                   NULL},
+		{INS(PRINT),  {.asInt  = 0},      {.asInt   = 0},                   NULL},
+		{INS(JMP),    {.asInt  = -9},     {.asInt   = 0},                   NULL},
+		{INS(FETCH),  {.asUInt = varsum}, {.asInt   = 0},                   NULL},
+		{INS(PRINT),  {.asInt  = 0},      {.asInt   = 0},                   NULL},
 	};
 	
 	int j;
@@ -59,23 +58,26 @@ int main()
 		printf("int %s\n", byte_to_binary((uint64_t) malloc(sizeof(int))));
 	}
 	
-	int number = sizeof(instructions) / sizeof(Instruction);
+	int number = (sizeof(instructions) / sizeof(Instruction)) - 1;
 	
-	int i;
-	for(i = 0; i < number; i++)
+	for(; number > 0; number--)
 	{
-		printf("Instruction %2d: %-11s, %016llx\n", i, Instruction_getTypeName(&instructions[i]), (uint64_t) &instructions[i]);
+		instructions[number - 1].next = &instructions[number];
 	}
 	
-	for(i = 1; i < number; i++)
+	frame->instructions = instructions;
+	
+	Frame_packFrame(frame);
+	
+	printf("Num instructions %d\n", frame->num_instructions);
+	
+	unsigned int i;
+	for(i = 0; i < frame->num_instructions ; i++)
 	{
-		instructions[i - 1].next = &instructions[i];
+		printf("Instruction %2d: %-11s, %016llx\n", i, Instruction_getTypeName(&frame->instructions[i]), (uint64_t) &frame->instructions[i]);
 	}
 	
-	instructions[6].data1  = (uint64_t) &instructions[15];
-	instructions[14].data1 = (uint64_t) &instructions[5];
-	
-	Eval_execInstructions(instructions, ctx);
+	Eval_execFrame(frame);
 	
 	return 0;
 }

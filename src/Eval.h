@@ -2,9 +2,9 @@
 #define EVAL_H 1
 
 #include "Value.h"
-#include "Context.h"
 #include "Instruction.h"
+#include "Frame.h"
 
-Value Eval_execInstructions(Instruction *instr, Context *ctx);
+Value Eval_execFrame(const Frame *frame);
 
 #endif

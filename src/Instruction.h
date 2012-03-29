@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "Value.h"
+
 #define INS(x) INSTR_##x
 
 enum Instruction_type
@@ -37,11 +39,21 @@ struct Instruction;
 
 typedef struct Instruction {
 	enum Instruction_type type;
-	uint64_t data1;
-	uint64_t data2;
+	union {
+		uint64_t asUInt;
+		int64_t asInt;
+		Value asValue;
+	} data1;
+	union {
+		uint64_t asUInt;
+		int64_t asInt;
+		Value asValue;
+	} data2;
+	/* TODO: Is this really needed, as the Frame keeps an array?
+	         Might be useful when constructing the Instruction-array first */
 	struct Instruction *next;
 } Instruction;
 
-char *Instruction_getTypeName(Instruction *instr);
+char *Instruction_getTypeName(const Instruction *const instr);
 
 #endif

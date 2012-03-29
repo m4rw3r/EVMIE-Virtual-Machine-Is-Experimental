@@ -1,37 +1,33 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include "Value.h"
-#include "Context.h"
-#include "Instruction.h"
+
 #include "Eval.h"
 
 #define VM_DEBUG_LEVEL 0
 
 #define ArithmeticOp(operation)                                              \
-	v1 = Context_getVariable(ctx, instr->data1);                             \
-	v2 = Context_getVariable(ctx, instr->data2);                             \
-	if(Value_isInt32(v1)) {                                                  \
-		if(Value_isInt32(v2)) {                                              \
+	if(Value_isInt32(VM_VAR1)) {                                                  \
+		if(Value_isInt32(VM_VAR2)) {                                              \
 			last_value = Value_fromInt32(                                    \
-				Value_getInt32(v1) operation Value_getInt32(v2));            \
+				Value_getInt32(VM_VAR1) operation Value_getInt32(VM_VAR2));            \
 		}                                                                    \
-		else if(Value_isDouble(v2)) {                                        \
+		else if(Value_isDouble(VM_VAR2)) {                                        \
 			last_value = Value_fromDouble(                                   \
-				(double) Value_getInt32(v1) operation Value_getDouble(v2));  \
+				(double) Value_getInt32(VM_VAR1) operation Value_getDouble(VM_VAR2));  \
 		}                                                                    \
 		else {                                                               \
 			last_value = Value_null();                                       \
 		}                                                                    \
 	}                                                                        \
-	else if(Value_isDouble(v1)) {                                            \
-		if(Value_isInt32(v2)) {                                              \
+	else if(Value_isDouble(VM_VAR1)) {                                            \
+		if(Value_isInt32(VM_VAR2)) {                                              \
 			last_value = Value_fromDouble(                                   \
-				Value_getDouble(v1) operation (double) Value_getInt32(v2));  \
+				Value_getDouble(VM_VAR1) operation (double) Value_getInt32(VM_VAR2));  \
 		}                                                                    \
-		else if(Value_isDouble(v2)) {                                        \
+		else if(Value_isDouble(VM_VAR2)) {                                        \
 			last_value = Value_fromDouble(                                   \
-				Value_getDouble(v1) operation Value_getDouble(v2));          \
+				Value_getDouble(VM_VAR1) operation Value_getDouble(VM_VAR2));          \
 		}                                                                    \
 		else {                                                               \
 			last_value = Value_null();                                       \
@@ -41,13 +37,27 @@
 		last_value = Value_null();                                           \
 	}
 
-Value Eval_execInstructions(Instruction *instr, Context *ctx)
+#define VM_VAR(var) values[(var)]
+#define VM_VAR1     VM_VAR(instr->data1.asUInt)
+#define VM_VAR2     VM_VAR(instr->data2.asUInt)
+
+Value Eval_execFrame(const Frame *frame)
 {
-	register Value last_value = Value_null();
-	register Value v1;
-	register Value v2;
+	register Value last_value           = Value_null();
+	register Value *values              = frame->variables;
+	register const Instruction *instr   = frame->instructions;
+	register const Instruction *const last_instr = &instr[frame->num_instructions - 1];
 	
-	while(instr)
+	if(frame->num_instructions == 0)
+	{
+		/* TODO: Some other error here? */
+		/* TODO: Move error code */
+		fprintf(stderr, "Error: Frame does not contain any instructions, or has not been packed!\n");
+		
+		exit(-1);
+	}
+	
+	while(instr <= last_instr)
 	{
 #if VM_DEBUG_LEVEL > 1
 		printf("Running %s, %016llx\n", Instruction_getTypeName(instr), (uint64_t) instr);
@@ -71,12 +81,10 @@ Value Eval_execInstructions(Instruction *instr, Context *ctx)
 				ArithmeticOp(/);
 				break;
 			case INS(MOD):
-				v1 = Context_getVariable(ctx, instr->data1);
-				v2 = Context_getVariable(ctx, instr->data2);
-				if(Value_isInt32(v1)) {
-					if(Value_isInt32(v2)) {
+				if(Value_isInt32(VM_VAR1)) {
+					if(Value_isInt32(VM_VAR2)) {
 						last_value = Value_fromInt32(
-							Value_getInt32(v1) % Value_getInt32(v2));
+							Value_getInt32(VM_VAR1) % Value_getInt32(VM_VAR2));
 					}
 					else {
 						last_value = Value_null();
@@ -93,62 +101,53 @@ Value Eval_execInstructions(Instruction *instr, Context *ctx)
 			case INS(BW_XOR):
 			case INS(BW_NOT):
 			case INS(IS_EQ):
-				v1 = Context_getVariable(ctx, instr->data1);
-				v2 = Context_getVariable(ctx, instr->data2);
-			
-				last_value = Value_fromBool(Value_equals(v1, v2));
+				last_value = Value_fromBool(Value_equals(VM_VAR1, VM_VAR2));
 				break;
 			case INS(IS_LT):
-				v1 = Context_getVariable(ctx, instr->data1);
-				v2 = Context_getVariable(ctx, instr->data2);
-			
-				if(Value_isInt32(v1) && Value_isInt32(v2))
+				if(Value_isInt32(VM_VAR1) && Value_isInt32(VM_VAR2))
 				{
-					last_value = Value_fromBool(Value_getInt32(v1) < Value_getInt32(v2));
+					last_value = Value_fromBool(Value_getInt32(VM_VAR1) < Value_getInt32(VM_VAR2));
 				}
 				break;
 			case INS(VARADD):
-				v1 = Context_getVariable(ctx, instr->data1);
-				if(Value_isInt32(v1))
+				if(Value_isInt32(VM_VAR1))
 				{
-					Context_setVariable(ctx, instr->data1, Value_fromInt32(
-						Value_getInt32(v1) + (int64_t) instr->data2));
+					Frame_setVariable(frame, instr->data1.asUInt, Value_fromInt32(
+						Value_getInt32(VM_VAR1) + instr->data2.asInt));
 				}
-				else if(Value_isDouble(v1))
+				else if(Value_isDouble(VM_VAR1))
 				{
-					Context_setVariable(ctx, instr->data1, Value_fromDouble(
-						Value_getDouble(v1) + (double) instr->data2));
+					Frame_setVariable(frame, instr->data1.asUInt, Value_fromDouble(
+						Value_getDouble(VM_VAR1) + (double) instr->data2.asInt));
 				}
 				break;
 			case INS(SETLV):
-				Context_setVariable(ctx, instr->data1, last_value);
+				Frame_setVariable(frame, instr->data1.asUInt, last_value);
 				break;
 			case INS(SETTO):
-				Context_setVariable(ctx, instr->data1, (Value) {.asBits = instr->data2});
+				Frame_setVariable(frame, instr->data1.asUInt, (Value) {.asBits = instr->data2.asUInt});
 				break;
 			case INS(FETCH):
-				last_value = Context_getVariable(ctx, instr->data1);
+				last_value = Frame_getVariable(frame, instr->data1.asUInt);
 				break;
 			case INS(COPY):
-				Context_setVariable(ctx, instr->data2, Context_getVariable(ctx, instr->data1));
+				Frame_setVariable(frame, instr->data2.asUInt, Frame_getVariable(frame, instr->data1.asUInt));
 				break;
 			case INS(EQ):
-				v1 = Context_getVariable(ctx, instr->data1);
-				v2 = Context_getVariable(ctx, instr->data2);
-				last_value = Value_fromBool(v1.asBits == v2.asBits);
+				last_value = Value_fromBool(VM_VAR1.asBits == VM_VAR2.asBits);
 				break;
 			case INS(JMP):
-				assert(instr->data1 != 0);
-				instr = (Instruction *) instr->data1;
+				assert(instr->data1.asInt != 0);
+				instr = instr + instr->data1.asInt;
 				continue;
 			case INS(JMPZ):
 				if((Value_isBool(last_value) && Value_getBool(last_value) == 0) ||
 					(Value_isInt32(last_value) && Value_getInt32(last_value) == 0) ||
 					Value_isNull(last_value))
 				{
-					assert(instr->data1 != 0);
+					assert(instr->data1.asInt != 0);
 					
-					instr = (Instruction *) instr->data1;
+					instr = instr + instr->data1.asInt;
 					continue;
 				}
 				break;
@@ -156,9 +155,9 @@ Value Eval_execInstructions(Instruction *instr, Context *ctx)
 				if((Value_isBool(last_value) && Value_getBool(last_value) != 0) ||
 					(Value_isInt32(last_value) && Value_getInt32(last_value) != 0))
 				{
-					assert(instr->data1 != 0);
+					assert(instr->data1.asInt != 0);
 					
-					instr = (Instruction *) instr->data1;
+					instr = instr + instr->data1.asInt;
 					continue;
 				}
 				break;
@@ -192,7 +191,7 @@ Value Eval_execInstructions(Instruction *instr, Context *ctx)
 				break;
 		}
 		
-		instr = instr->next;
+		instr++;
 		
 #if VM_DEBUG_LEVEL > 1
 		printf("last_value: %016lx\n", last_value.asBits);

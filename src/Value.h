@@ -60,7 +60,7 @@ typedef union Value
 #define Value_BoolTag   0x0001000400000000
 #define Value_MinDouble 0x0002000000000000
 #define Value_TagMask   (Value_Int32Tag | Value_MinDouble | Value_NullTag | Value_BoolTag)
-/* Tags for pointers, stored in bits which *should not* be used (ie. large enough allocated memory) */
+/* Tags for pointers, stored in bits which *should not* be used (ie. large enough allocated memory chunks) */
 #define Value_StrTag    0x0000000000000001
 #define Value_ObjTag    0x0000000000000002
 #define Value_HashTag   0x0000000000000004
@@ -104,6 +104,11 @@ static inline Value Value_fromString(const char *str, const int len)
 	return (Value) {.asBits = ((VALUE_PTR_T) cstr) | Value_StrTag};
 }
 
+static inline Value Value_fromCString(const char *str)
+{
+	return Value_fromString(str, strlen(str));
+}
+
 static inline Value Value_fromBool(const int val)
 {
 	return (Value) {.asBits = ((VALUE_PTR_T) (val & 1)) | Value_BoolTag};
@@ -118,8 +123,10 @@ static inline Value Value_null()
 #define Value_isInt32(value)   (((value).asBits & Value_Int32Tag) == Value_Int32Tag)
 #define Value_isBool(value)    (((value).asBits & Value_BoolTag) == Value_BoolTag)
 #define Value_isNull(value)    ((value).asBits == Value_NullTag)
+
+#define Value_isPointer(value) (((value).asBits < Value_Int32Tag))
 #define Value_isString(value)  (((value).asBits & (Value_StrTag | ~Value_PtrMask)) == Value_StrTag)
-#define Value_isPointer(value) (!((value).asBits & Value_TagMask))
+
 #define Value_equals(value1, value2) ((value1).asBits == (value2).asBits)
 
 static inline double Value_getDouble(const Value value)
