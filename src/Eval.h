@@ -4,7 +4,8 @@
 #include "Value.h"
 #include "Instruction.h"
 #include "Frame.h"
+#include "CFrame.h"
 
-Value Eval_execFrame(const Frame *frame);
+Value Eval_execFrame(Frame *frame);
 
 #endif

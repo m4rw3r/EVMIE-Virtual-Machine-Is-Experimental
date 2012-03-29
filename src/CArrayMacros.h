@@ -19,6 +19,7 @@
 		ARRAY_SIZE(array) = 0; } while(0)
 
 /* Resizes array of type type to at least ARRAY_SIZE(array) */ 
+/* TODO: Make sure we only use powers of 2? */
 #define ARRAY_MAKESIZE(array, type)                                         \
 	if(ARRAY_MAX(array) < ARRAY_SIZE(array)) {                              \
 	while(ARRAY_MAX(array) < ARRAY_SIZE(array)) { ARRAY_MAX(array) *= 2; }  \

@@ -33,6 +33,8 @@ enum Instruction_type
 	INS(FETCH),  /* Fetches the variable var(data1) to last_value */
 	INS(COPY),   /* Copies the value from var(data1) to var(data2) */
 	INS(PRINT),  /* Prints last_value */
+	INS(CALL),
+	INS(RET),
 };
 
 struct Instruction;
@@ -49,9 +51,6 @@ typedef struct Instruction {
 		int64_t asInt;
 		Value asValue;
 	} data2;
-	/* TODO: Is this really needed, as the Frame keeps an array?
-	         Might be useful when constructing the Instruction-array first */
-	struct Instruction *next;
 } Instruction;
 
 char *Instruction_getTypeName(const Instruction *const instr);

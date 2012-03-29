@@ -32,6 +32,8 @@ char *Instruction_getTypeName(const Instruction *const instr)
 		return_typename(INS(JNZ))
 		return_typename(INS(FETCH))
 		return_typename(INS(COPY))
+		return_typename(INS(CALL))
+		return_typename(INS(RET))
 		return_typename(INS(PRINT))
 		default:
 			return "UNKNOWN";

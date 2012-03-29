@@ -6,6 +6,7 @@
 #include "Value.h"
 #include "Instruction.h"
 #include "Eval.h"
+#include "Frame.h"
 
 const char *byte_to_binary(uint64_t x)
 {
@@ -23,6 +24,7 @@ const char *byte_to_binary(uint64_t x)
 
 int main()
 {
+	/* Function to calcuate the 20 first fibonacci numbers */
 	Frame *frame = malloc(sizeof(Frame));
 	Frame_init(frame);
 	
@@ -33,51 +35,64 @@ int main()
 	uint64_t vari   = Frame_allocVariable(frame);
 	
 	Instruction instructions[] = {
-		{INS(SETTO),  {.asUInt = varsum}, {.asValue = Value_fromInt32(0) }, NULL},
-		{INS(SETTO),  {.asUInt = varn},   {.asValue = Value_fromInt32(20)}, NULL},
-		{INS(SETTO),  {.asUInt = vara},   {.asValue = Value_fromInt32(0) }, NULL},
-		{INS(SETTO),  {.asUInt = varb},   {.asValue = Value_fromInt32(1) }, NULL},
-		{INS(SETTO),  {.asUInt = vari},   {.asValue = Value_fromInt32(0) }, NULL},
-		{INS(IS_LT),  {.asUInt = vari},   {.asUInt  = varn},                NULL},
-		{INS(JMPZ),   {.asInt  = 9},      {.asInt   = 0},                   NULL},
-		{INS(VARADD), {.asUInt = vari},   {.asInt   = 1},                   NULL},
-		{INS(ADD),    {.asUInt = vara},   {.asUInt  = varb},                NULL},
-		{INS(SETLV),  {.asUInt = varsum}, {.asInt   = 0},                   NULL},
-		{INS(COPY),   {.asUInt = varb},   {.asUInt  = vara},                NULL},
-		{INS(COPY),   {.asUInt = varsum}, {.asUInt  = varb},                NULL},
-		{INS(FETCH),  {.asUInt = varsum}, {.asInt   = 0},                   NULL},
-		{INS(PRINT),  {.asInt  = 0},      {.asInt   = 0},                   NULL},
-		{INS(JMP),    {.asInt  = -9},     {.asInt   = 0},                   NULL},
-		{INS(FETCH),  {.asUInt = varsum}, {.asInt   = 0},                   NULL},
-		{INS(PRINT),  {.asInt  = 0},      {.asInt   = 0},                   NULL},
+		{INS(SETTO),  {.asUInt = varsum}, {.asValue = Value_fromInt32(0) }},
+		{INS(SETTO),  {.asUInt = varn},   {.asValue = Value_fromInt32(20)}},
+		{INS(SETTO),  {.asUInt = vara},   {.asValue = Value_fromInt32(0) }},
+		{INS(SETTO),  {.asUInt = varb},   {.asValue = Value_fromInt32(1) }},
+		{INS(SETTO),  {.asUInt = vari},   {.asValue = Value_fromInt32(0) }},
+		{INS(IS_LT),  {.asUInt = vari},   {.asUInt  = varn}},
+		{INS(JMPZ),   {.asInt  = 9},      {.asInt   = 0}},
+		{INS(VARADD), {.asUInt = vari},   {.asInt   = 1}},
+		{INS(ADD),    {.asUInt = vara},   {.asUInt  = varb}},
+		{INS(SETLV),  {.asUInt = varsum}, {.asInt   = 0}},
+		{INS(COPY),   {.asUInt = varb},   {.asUInt  = vara}},
+		{INS(COPY),   {.asUInt = varsum}, {.asUInt  = varb}},
+		{INS(FETCH),  {.asUInt = varsum}, {.asInt   = 0}},
+		{INS(PRINT),  {.asInt  = 0},      {.asInt   = 0}},
+		{INS(JMP),    {.asInt  = -9},     {.asInt   = 0}},
+		{INS(RET), {.asInt = 0}, {.asInt = 0}},
 	};
 	
-	int j;
-	for(j = 0; j < 10; j++)
-	{
-		printf("int %s\n", byte_to_binary((uint64_t) malloc(sizeof(int))));
-	}
+	int number = (sizeof(instructions) / sizeof(Instruction));
 	
-	int number = (sizeof(instructions) / sizeof(Instruction)) - 1;
+	Frame_appendInstructions(frame, instructions, number);
 	
-	for(; number > 0; number--)
-	{
-		instructions[number - 1].next = &instructions[number];
-	}
+	/* Function to call it 10 times */
+	Frame *frame_main = malloc(sizeof(Frame));
+	Frame_init(frame_main);
+	uint64_t varloop = Frame_allocVariable(frame_main);
+	uint64_t varlc = Frame_allocVariable(frame_main);
 	
-	frame->instructions = instructions;
+	Instruction instructions_main[] = {
+		{INS(SETTO), {.asUInt = varloop}, {.asValue = Value_fromInt32(10)}},
+		{INS(SETTO), {.asUInt = varlc}, {.asValue = Value_fromInt32(0)}},
+		{INS(IS_LT), {.asUInt = varlc}, {.asUInt = varloop}},
+		{INS(JMPZ),  {.asInt  = 4}, {.asUInt = 0}},
+		{INS(VARADD),{.asUInt = varlc},   {.asInt   = 1}},
+		{INS(CALL),  {.asUInt = Frame_allocFunction(frame_main, frame)}, {.asUInt = 0}},
+		{INS(JMP),   {.asInt  = -4}, {.asInt = 0}},
+	};
 	
-	Frame_packFrame(frame);
+	Frame_appendInstructions(frame_main, instructions_main, sizeof(instructions_main) / sizeof(Instruction));
 	
-	printf("Num instructions %d\n", frame->num_instructions);
+	/* Compile the stuff */
+	Frame_compileFrame(frame_main);
 	
+	printf("Fibonacci instructions:\n");
 	unsigned int i;
-	for(i = 0; i < frame->num_instructions ; i++)
+	for(i = 0; i < ARRAY_SIZE(frame->instructions); i++)
 	{
 		printf("Instruction %2d: %-11s, %016llx\n", i, Instruction_getTypeName(&frame->instructions[i]), (uint64_t) &frame->instructions[i]);
 	}
 	
-	Eval_execFrame(frame);
+	printf("Calling instructions:\n");
+	for(i = 0; i < ARRAY_SIZE(frame_main->instructions); i++)
+	{
+		printf("Instruction %2d: %-11s, %016llx\n", i, Instruction_getTypeName(&frame_main->instructions[i]), (uint64_t) &frame_main->instructions[i]);
+	}
+	
+	/* Run */
+	Eval_execFrame(frame_main);
 	
 	return 0;
 }

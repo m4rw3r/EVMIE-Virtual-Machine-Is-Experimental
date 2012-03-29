@@ -1,73 +1,46 @@
-#ifndef CLOSURE_H
-#define CLOSURE_H 1
+#ifndef FRAME_H
+#define FRAME_H 1
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
 
 #include "Value.h"
 #include "Instruction.h"
+#include "CArrayMacros.h"
+#include "CFrame.h"
 
 #ifndef FRAME_DEFAULT_NUMVARS
 #  define FRAME_DEFAULT_NUMVARS 16
+#endif
+#ifndef FRAME_DEFAULT_FUNCSIZE
+#  define  FRAME_DEFAULT_FUNCSIZE 8
+#endif
+#ifndef FRAME_DEFAULT_INSTRSIZE
+#  define FRAME_DEFAULT_INSTRSIZE 16
 #endif
 
 struct Frame;
 
 typedef struct Frame
 {
-	uint32_t num_vars;
-	uint32_t max_vars;
-	uint32_t num_instructions;
+	ARRAY_CDECL(variables, Value)
+	ARRAY_CDECL(functions, struct Frame)
+	ARRAY_CDECL(instructions, Instruction)
 	
-	const Instruction *instructions;
-	Value *variables;
-	struct Frame *last_frame;
+	CFrame *compiled_frame;
 } Frame;
+
+int Frame_compileFrame(Frame *const frame);
 
 static inline int Frame_init(Frame *const frame)
 {
-	frame->variables        = malloc(sizeof(Value) * FRAME_DEFAULT_NUMVARS);
-	frame->num_vars         = 0;
-	frame->max_vars         = FRAME_DEFAULT_NUMVARS;
-	frame->num_instructions = 0;
-	frame->instructions     = NULL;
+	ARRAY_INIT(frame->variables, Value, FRAME_DEFAULT_NUMVARS);
+	ARRAY_INIT(frame->functions, Frame, FRAME_DEFAULT_FUNCSIZE);
+	ARRAY_INIT(frame->instructions, Instruction, FRAME_DEFAULT_INSTRSIZE);
+	
+	frame->compiled_frame = NULL;
 	
 	return 1;
-}
-
-static inline void Frame_copy(Frame *const to, const Frame *const from)
-{
-	memcpy(to, from, sizeof(Frame));
-	
-	/* Only need to copy variables, as instructions are constant */
-	to->variables = malloc(sizeof(Value) * from->max_vars);
-	memcpy(to->variables, from->variables, sizeof(Value) * from->max_vars);
-	
-	/* TODO: Needed? Will most surely be overwritten just after the copy operation */
-	to->last_frame = NULL;
-}
-
-/**
- * Makes sure the size of the variables array can contain the variables.
- */
-static inline void Frame_allocVariablesArray(Frame *const frame, uint32_t num_vars)
-{
-	if(frame->max_vars < num_vars)
-	{
-		frame->max_vars *= 2;
-		
-		void *tmp = realloc(frame->variables, (sizeof(Value) * frame->max_vars));
-		
-		if( ! tmp)
-		{
-			/* TODO: Move error code to separate file and remove include of stdio.h */
-			fprintf(stderr, "ERROR: Couldn't realloc() Context variables.");
-			exit(-1);
-		}
-		
-		frame->variables = tmp;
-	}
 }
 
 /**
@@ -75,9 +48,20 @@ static inline void Frame_allocVariablesArray(Frame *const frame, uint32_t num_va
  */
 static inline uint32_t Frame_allocVariable(Frame *const frame)
 {
-	Frame_allocVariablesArray(frame, ++frame->num_vars);
+	++ARRAY_SIZE(frame->variables);
+	ARRAY_MAKESIZE(frame->variables, Value);
 	
-	return frame->num_vars - 1;
+	return ARRAY_SIZE(frame->variables) - 1;
+}
+
+static inline uint32_t Frame_allocFunction(Frame *const frame, Frame *const function)
+{
+	++ARRAY_SIZE(frame->functions);
+	ARRAY_MAKESIZE(frame->functions, Frame);
+	
+	frame->functions[ARRAY_SIZE(frame->functions) - 1] = *function;
+	
+	return ARRAY_SIZE(frame->functions) - 1;
 }
 
 /**
@@ -85,28 +69,60 @@ static inline uint32_t Frame_allocVariable(Frame *const frame)
  */
 static inline int Frame_dtor(Frame *const frame)
 {
-	/* TODO: Iterate variables and do GC on pointers */
-	/* TODO: Reuse frames? */
+	/* TODO: Iterate variables and do GC on pointers (or is this only in CFrames) ? */
+	
+	if(frame->compiled_frame)
+	{
+		free((Instruction *)frame->compiled_frame->cur_instr);
+		free((CFrame *)frame->compiled_frame->functions);
+		
+		CFrame_free(frame->compiled_frame);
+	}
 	
 	free(frame->variables);
+	free(frame->functions);
+	free(frame->instructions);
 	
 	return 1;
 }
 
 static inline Value Frame_getVariable(const Frame *const frame, const uint32_t variable)
 {
-	assert(variable < frame->num_vars);
+	assert(variable < ARRAY_MAX(frame->variables));
 	
 	return frame->variables[variable];
 }
 
 static inline void Frame_setVariable(const Frame *const frame, const uint32_t variable, const Value value)
 {
-	assert(variable < frame->num_vars);
+	assert(variable < ARRAY_MAX(frame->variables));
 	
 	frame->variables[variable] = value;
 }
 
-int Frame_packFrame(Frame *const frame);
+static inline void Frame_appendInstruction(Frame *const frame, const Instruction instr)
+{
+	++ARRAY_SIZE(frame->instructions);
+	ARRAY_MAKESIZE(frame->instructions, Instruction);
+	
+	frame->instructions[ARRAY_SIZE(frame->instructions) - 1] = instr;
+}
+
+static inline void Frame_appendInstructions(Frame *const frame, const Instruction *instr_array, uint32_t size)
+{
+	uint32_t oldsize = ARRAY_SIZE(frame->instructions);
+	
+	ARRAY_SIZE(frame->instructions) += size;
+	ARRAY_MAKESIZE(frame->instructions, Instruction);
+	
+	memcpy(frame->instructions + oldsize, instr_array, sizeof(Instruction) * size);
+}
+
+static inline CFrame *Frame_getCompiledFrame(Frame *const frame)
+{
+	Frame_compileFrame(frame);
+	
+	return frame->compiled_frame;
+}
 
 #endif

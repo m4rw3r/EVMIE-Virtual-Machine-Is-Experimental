@@ -6,44 +6,39 @@
  * Call to compress the frame (allocate new Instruction array and realloc variables into
  * smallest possible size) before usage in Eval.
  */
-int Frame_packFrame(Frame *const frame)
+int Frame_compileFrame(Frame *const frame)
 {
-	/* TODO: Is this really needed here for instructions? Isn't there a better way to
-	         do it elsewhere (like where the Instruction array is assembled) ? */
-	uint32_t num_instructions = 0; 
-	const Instruction *instr = frame->instructions;
-	
-	for(; instr != NULL; instr = instr->next, num_instructions++)
+	if(frame->compiled_frame)
 	{
-		/* Empty */
+		return 0;
 	}
 	
-	/* TODO: Where to free() this? */
-	Instruction *instrarray = malloc(sizeof(Instruction) * num_instructions);
-	instr = frame->instructions;
-	int i = 0;
+	CFrame *cframe = CFrame_alloc();
 	
-	for(; instr != NULL; instr = instr->next, i++)
+	/* Pack the instruction array into continuous block */
+	ARRAY_PACK(frame->instructions, Instruction);
+	cframe->cur_instr  = (const Instruction*) frame->instructions;
+	cframe->last_instr = &cframe->cur_instr[ARRAY_SIZE(frame->instructions) - 1];
+	
+	uint32_t i;
+	CFrame *related_frames = malloc(sizeof(CFrame) * ARRAY_SIZE(frame->functions));
+	for(i = 0; i < ARRAY_SIZE(frame->functions); i++)
 	{
-		instrarray[i] = *instr;
+		Frame_compileFrame(&frame->functions[i]);
+		
+		related_frames[i] = *frame->functions[i].compiled_frame;
 	}
 	
-	frame->instructions = instrarray;
-	frame->num_instructions = num_instructions;
+	cframe->functions = related_frames;
+	/* No need to save size, as they won't be copied */
 	
 	/* Realloc the variables array, to make for less memory allocated for each frame
 	   when running */
-	void *tmp = realloc(frame->variables, (sizeof(Value) * frame->num_vars));
+	ARRAY_PACK(frame->variables, Value);
+	cframe->variables = frame->variables;
+	cframe->num_vars  = ARRAY_SIZE(frame->variables);
 	
-	if( ! tmp)
-	{
-		/* TODO: Move error code to separate file and remove include of stdio.h */
-		fprintf(stderr, "ERROR: Couldn't realloc() Context variables.");
-		exit(-1);
-	}
-	
-	frame->variables = tmp;
-	frame->max_vars  = frame->num_vars;
+	frame->compiled_frame = cframe;
 	
 	return 1;
 }
