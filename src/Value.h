@@ -32,10 +32,10 @@
 #  define VALUE_PTR_T uintptr_t
 #else
 #  warning "Falling back on uint64_t"
-#  if SIZEOF_DOUBLE != SIZEOF_UINTPTR_T
+#  if SIZEOF_DOUBLE != SIZEOF_UINT64_T
 #    error "Size mismatch between double and uint64_t"
 #  endif
-#  if ALIGNOF_DOUBLE != ALIGNOF_UINTPTR_T
+#  if ALIGNOF_DOUBLE != ALIGNOF_UINT64_T
 #    error "Alignment mismatch between double and uint64_t"
 #  endif
 #  define VALUE_PTR_T uint64_t
