@@ -11,6 +11,8 @@ typedef struct MemInfo {
 	struct MemInfo *next;
 } MemInfo;
 
+/* TODO: Not thread safe at the moment, might be needed though */
+
 static MemInfo *memInfoLast  = NULL;
 
 static void LeakCheck_addMemPtr(void *ptr, size_t size, const char *file, const unsigned int line)
@@ -34,26 +36,23 @@ static void LeakCheck_addMemPtr(void *ptr, size_t size, const char *file, const 
 static void LeakCheck_removeMemPtr(void *ptr, const char *file, const unsigned int line)
 {
 	MemInfo *cur;
-	MemInfo *prev;
+	MemInfo *prev = NULL;
 	
 	for(cur = memInfoLast; cur; cur = cur->next) {
 		if(cur->ptr == ptr) {
 			if(cur == memInfoLast) {
 				memInfoLast = cur->next;
-			} else {
-				for(prev = memInfoLast; prev; prev = prev->next) {
-					if(prev->next == cur) {
-						prev->next = cur->next;
-						
-						break;
-					}
-				}
+			} else if(prev != NULL) {
+				prev->next = cur->next;
 			}
 			
 			cur->next = NULL;
 			free(cur);
+			
 			return;
 		}
+		
+		prev = cur;
 	}
 	
 	/* Failure, ptr is not allocated, just alert the user that it might be a sign of a problem */
@@ -132,4 +131,9 @@ void LeakCheck_free(void *ptr, const char *file, unsigned int line)
 	}
 	
 	free(ptr);
+}
+void LeakCheck_exit(int status)
+{
+	LeakCheck_printMemReport(1);
+	exit(status);
 }
