@@ -1,0 +1,233 @@
+/* 
+ * variable   = uint64_t Value from the current CFrame's variables array
+ * const uint = uint32_t
+ * const int  = int32_t
+ * int        = int16_t
+ * uint       = uint16_t
+ * cframe     = CFrame from the current CFrame's functions array
+ */
+
+ins NOP()
+{
+	/* Empty */
+}
+
+ins END()
+{
+	goto end_eval;
+}
+
+/* TODO: arithmetic variants which alert on overflow? */
+/* TODO: Float operations (double) */
+
+/* Immediates (constant 2nd parameters) */
+ins ADDI(variable, variable, const int)
+{
+	$2.asI = $1.asI + $3;
+}
+
+ins SLTI(variable, variable, const int)
+{
+	$2.asI = $1.asI < (int64_t) $3;
+}
+
+/* Unsigned comparison */
+ins SLTIU(variable, variable, const uint)
+{
+	$2.asI = $1.asU < (uint64_t) $3;
+}
+
+ins ANDI(variable, variable, const uint)
+{
+	$2.asU = $1.asU & (uint64_t) $3;
+}
+
+ins ORI(variable, variable, const uint)
+{
+	$2.asU = $1.asU | (uint64_t) $3;
+}
+
+ins XORI(variable, variable, const uint)
+{
+	$2.asU = $1.asU ^ (uint64_t) $3;
+}
+
+ins LI(variable, undef, const uint) {
+	/* Sets the lower 32 bits of variable */
+	$1.asU = ($1.asU & ((uint64_t)UINT32_MAX << 32)) | (uint64_t) $3;
+}
+
+ins LUI(variable, undef, const uint)
+{
+	/* Set upper 32 bits while preserving the lower 32 bits */
+	$1.asU = (((uint64_t) $3) << (uint64_t) 32) | ($1.asU & UINT32_MAX);
+}
+
+ins MOVE(variable, variable) {
+	$2.asU = $1.asU;
+}
+
+/* Arithmetic */
+ins ADD(variable, variable, variable)
+{
+	$3.asI = $1.asI + $2.asI;
+}
+
+ins SUB(variable, variable, variable)
+{
+	$3.asI = $1.asI - $2.asI;
+}
+
+ins SLT(variable, variable, variable)
+{
+	$1.asI = $2.asI < $3.asI;
+}
+
+/* Unsigned comparison */
+ins SLTU(variable, variable, variable)
+{
+	$1.asI = $2.asU < $3.asU;
+}
+
+ins AND(variable, variable, variable)
+{
+	$1.asU = $2.asU & $3.asU;
+}
+
+ins OR(variable, variable, variable)
+{
+	$1.asU = $2.asU | $3.asU;
+}
+
+ins XOR(variable, variable, variable)
+{
+	$1.asU = $2.asU ^ $3.asU;
+}
+
+ins NOR(variable, variable, variable)
+{
+	$1.asU = ~($2.asU | $3.asU);
+}
+
+ins SLL(variable, variable, uint)
+{
+	$1.asU = $2.asU << $3;
+}
+
+ins SRL(variable, variable, uint)
+{
+	$1.asU = $2.asU >> $3;
+}
+
+ins SRA(variable, variable, int)
+{
+	/* TODO: Hopefully this will result in arithmetic shift, implementation dependent */
+	$1.asI = $2.asI >> $3;
+}
+
+ins SLLV(variable, variable, variable)
+{
+	$1.asU = $2.asU << $3.asU;
+}
+
+ins SRLV(variable, variable, variable)
+{
+	$1.asU = $2.asU >> $3.asU;
+}
+
+ins SRAV(variable, variable, variable)
+{
+	/* TODO: Hopefully this will result in arithmetic shift, implementation dependent */
+	$1.asI = $2.asI >> $3.asI;
+}
+
+ins JMP(undef, undef, const int)
+{
+	assert($3 != 0);
+	instr += $3;
+	continue;
+}
+
+/* TODO: Add the Jump and Link? (ie. store the previous address in some register)? */
+
+/* TODO: Needed? The variables does not know how the instructions are arranged at the moment */
+ins JMPR(variable)
+{
+	assert($1.asI != 0);
+	instr += $1.asI;
+	continue;
+}
+
+ins BEQ(variable, variable, const int)
+{
+	if($1.asI == $2.asI) {
+		assert($3 != 0);
+		instr += $3;
+		continue;
+	}
+}
+
+ins BNE(variable, variable, const int)
+{
+	if($1.asI != $2.asI) {
+		assert($3 != 0);
+		instr += $3;
+		continue;
+	}
+}
+
+ins BLTZ(variable, undef, const int)
+{
+	if($1.asI < 0) {
+		assert($3 != 0);
+		instr += $3;
+		continue;
+	}
+}
+
+ins BLEZ(variable, undef, const int)
+{
+	if($1.asI <= 0) {
+		assert($3 != 0);
+		instr += $3;
+		continue;
+	}
+}
+
+/*ins BGTZ(variable, undef, const int)
+{
+	if($1.asI > 0) {
+		assert($3 != 0);
+		instr += $3;
+		continue;
+	}
+}
+
+ins BGEZ(variable, undef, const int)
+{
+	if($1.asI >= 0) {
+		assert($3 != 0);
+		instr += $3;
+		continue;
+	}
+}*/
+
+ins PRINT(variable) {
+	printf("0x%llx\n", $1.asU);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

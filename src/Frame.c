@@ -13,6 +13,8 @@ int Frame_compileFrame(Frame *const frame)
 		return 0;
 	}
 	
+	/* TODO: Alert for empty Frame? (ie. ARRAY_SIZE(frame->instructions) == 0) */
+	
 	CFrame *cframe = CFrame_alloc();
 	
 	/* Pack the instruction array into continuous block */
@@ -34,7 +36,7 @@ int Frame_compileFrame(Frame *const frame)
 	
 	/* Realloc the variables array, to make for less memory allocated for each frame
 	   when running */
-	ARRAY_PACK(frame->variables, Value);
+	ARRAY_PACK(frame->variables, CFrame_Register);
 	cframe->variables = frame->variables;
 	cframe->num_vars  = ARRAY_SIZE(frame->variables);
 	

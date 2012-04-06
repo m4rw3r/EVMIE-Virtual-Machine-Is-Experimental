@@ -1,6 +1,6 @@
 
 SOURCE  := $(wildcard src/*.c)
-OBJS    := $(patsubst %.c,%.o,$(SOURCE))
+OBJS    := $(SOURCE:.c=.o)
 CFLAGS  := -std=c99 -Wall -Wextra --pedantic -O3 -I. -g
 LFLAGS  :=
 
@@ -23,16 +23,25 @@ all: main
 tools/LeakCheck.o:
 	$(CC) -std=c99 -Wall -Wextra --pedantic -O3 -g -c -o tools/LeakCheck.o tools/LeakCheck.c
 
-main: $(OBJS)
-	$(CC) $(LFLAGS) -o main $(OBJS)
-opcompiler: $(OPCOMPILER_OBJS)
+tools/OpCompiler: $(OPCOMPILER_OBJS)
 	$(CC) $(LFLAGS) $(OPCOMPILER_OBJS) -o tools/OpCompiler
 
+src/Instruction_opcode.gen.h: tools/OpCompiler src/opcodes.def
+	./tools/OpCompiler src/Opcodes.def src/Instruction_opcode.gen.h \
+		src/Instruction_getTypeName.gen.inc src/Eval_opcodes.gen.inc
+
+src/opcode2str.inc: src/Instruction_opcode.gen.h
+src/opcodes_eval.h: src/Instruction_opcode.gen.h
+
+main: src/Instruction_opcode.gen.h $(OBJS)
+	$(CC) $(LFLAGS) -o main $(OBJS)
 
 clean:
 	rm -f tools/*.o
 	rm -f tools/OpCompiler
 	rm -f src/*.o
+	rm -f src/*.inc
+	rm -f src/Instruction_opcodes.gen.h
 	rm -f main
 
 distclean: clean

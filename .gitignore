@@ -4,4 +4,7 @@ config.h
 config.log
 config.status
 *.o
+*.gen.inc
+*.gen.h
 main
+tools/OpCompiler

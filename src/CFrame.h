@@ -4,9 +4,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <string.h>
+#include <assert.h>
 
-#include "Value.h"
+#include "config.h"
 #include "Instruction.h"
+
+typedef union CFrame_Register {
+	uint64_t asU;
+	int64_t  asI;
+	double   asF;
+} CFrame_Register;
 
 struct CFrame;
 
@@ -20,8 +28,12 @@ typedef struct CFrame
 	const Instruction *cur_instr;
 	/* Last instruction pointer */
 	const Instruction *last_instr;
-	Value *variables;
+	CFrame_Register *variables;
 	struct CFrame *prev_frame;
+#if VM_PROFILE
+	/* Number of cycles spent in this CFrame */
+	uint64_t cycles;
+#endif
 } CFrame;
 
 static inline CFrame *CFrame_alloc()
@@ -36,8 +48,8 @@ static inline void CFrame_copy(CFrame *const to, const CFrame *const from)
 	memcpy(to, from, sizeof(CFrame));
 	
 	/* Only need to copy variables, as instructions are constant */
-	to->variables = malloc(sizeof(Value) * from->num_vars);
-	memcpy(to->variables, from->variables, sizeof(Value) * from->num_vars);
+	to->variables = malloc(sizeof(CFrame_Register) * from->num_vars);
+	memcpy(to->variables, from->variables, sizeof(CFrame_Register) * from->num_vars);
 	
 	/* TODO: Needed? Will most surely be overwritten just after the copy operation */
 	to->prev_frame = NULL;
@@ -64,14 +76,14 @@ static inline int CFrame_free(CFrame *const frame)
 	return 1;
 }
 
-static inline Value CFrame_getVariable(const CFrame *const frame, const uint32_t variable)
+static inline CFrame_Register CFrame_getVariable(const CFrame *const frame, const uint16_t variable)
 {
 	assert(variable < frame->num_vars);
 	
 	return frame->variables[variable];
 }
 
-static inline void CFrame_setVariable(const CFrame *const frame, const uint32_t variable, const Value value)
+static inline void CFrame_setVariable(const CFrame *const frame, const uint16_t variable, const CFrame_Register value)
 {
 	assert(variable < frame->num_vars);
 	

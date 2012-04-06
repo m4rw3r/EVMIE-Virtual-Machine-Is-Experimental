@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include "Value.h"
 #include "Instruction.h"
 #include "CArrayMacros.h"
 #include "CFrame.h"
@@ -23,7 +22,7 @@ struct Frame;
 
 typedef struct Frame
 {
-	ARRAY_CDECL(variables, Value)
+	ARRAY_CDECL(variables, CFrame_Register)
 	ARRAY_CDECL(functions, struct Frame)
 	ARRAY_CDECL(instructions, Instruction)
 	
@@ -34,7 +33,7 @@ int Frame_compileFrame(Frame *const frame);
 
 static inline int Frame_init(Frame *const frame)
 {
-	ARRAY_INIT(frame->variables, Value, FRAME_DEFAULT_NUMVARS);
+	ARRAY_INIT(frame->variables, CFrame_Register, FRAME_DEFAULT_NUMVARS);
 	ARRAY_INIT(frame->functions, Frame, FRAME_DEFAULT_FUNCSIZE);
 	ARRAY_INIT(frame->instructions, Instruction, FRAME_DEFAULT_INSTRSIZE);
 	
@@ -46,15 +45,15 @@ static inline int Frame_init(Frame *const frame)
 /**
  * Allocates a new variable and returns its index in the Frame->variables array.
  */
-static inline uint32_t Frame_allocVariable(Frame *const frame)
+static inline uint16_t Frame_allocVariable(Frame *const frame)
 {
 	++ARRAY_SIZE(frame->variables);
-	ARRAY_MAKESIZE(frame->variables, Value);
+	ARRAY_MAKESIZE(frame->variables, CFrame_Register);
 	
 	return ARRAY_SIZE(frame->variables) - 1;
 }
 
-static inline uint32_t Frame_allocFunction(Frame *const frame, Frame *const function)
+static inline uint16_t Frame_allocFunction(Frame *const frame, Frame *const function)
 {
 	++ARRAY_SIZE(frame->functions);
 	ARRAY_MAKESIZE(frame->functions, Frame);
@@ -86,14 +85,14 @@ static inline int Frame_dtor(Frame *const frame)
 	return 1;
 }
 
-static inline Value Frame_getVariable(const Frame *const frame, const uint32_t variable)
+static inline CFrame_Register Frame_getVariable(const Frame *const frame, const uint16_t variable)
 {
 	assert(variable < ARRAY_MAX(frame->variables));
 	
 	return frame->variables[variable];
 }
 
-static inline void Frame_setVariable(const Frame *const frame, const uint32_t variable, const Value value)
+static inline void Frame_setVariable(const Frame *const frame, const uint16_t variable, const CFrame_Register value)
 {
 	assert(variable < ARRAY_MAX(frame->variables));
 	
@@ -108,9 +107,9 @@ static inline void Frame_appendInstruction(Frame *const frame, const Instruction
 	frame->instructions[ARRAY_SIZE(frame->instructions) - 1] = instr;
 }
 
-static inline void Frame_appendInstructions(Frame *const frame, const Instruction *instr_array, uint32_t size)
+static inline void Frame_appendInstructions(Frame *const frame, const Instruction *instr_array, uint16_t size)
 {
-	uint32_t oldsize = ARRAY_SIZE(frame->instructions);
+	uint16_t oldsize = ARRAY_SIZE(frame->instructions);
 	
 	ARRAY_SIZE(frame->instructions) += size;
 	ARRAY_MAKESIZE(frame->instructions, Instruction);
