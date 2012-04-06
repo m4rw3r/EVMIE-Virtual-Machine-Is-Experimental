@@ -535,7 +535,7 @@ char *Token_getAsString(Token *tok)
 		case_return_conststr(T_XOR_ASSIGN, "^=");
 		case_return_conststr(T_OR_ASSIGN, "|=");
 		case_return_conststr(T_RIGHT_OP, ">>");
-		case_return_conststr(T_LEFT_OP, ">>");
+		case_return_conststr(T_LEFT_OP, "<<");
 		case_return_conststr(T_INC_OP, "++");
 		case_return_conststr(T_DEC_OP, "--");
 		case_return_conststr(T_PTR_OP, "->");
