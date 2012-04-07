@@ -119,7 +119,7 @@ void *LeakCheck_realloc(void *ptr, size_t size, const char *file, unsigned int l
 	
 	if(newptr != NULL) {
 		LeakCheck_removeMemPtr(ptr, file, line);
-		LeakCheck_addMemPtr(ptr, size, file, line);
+		LeakCheck_addMemPtr(newptr, size, file, line);
 	}
 	
 	return newptr;
