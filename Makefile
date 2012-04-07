@@ -27,8 +27,10 @@ tools/OpCompiler: $(OPCOMPILER_OBJS)
 	$(CC) $(LFLAGS) $(OPCOMPILER_OBJS) -o tools/OpCompiler
 
 src/Instruction_opcode.gen.h: tools/OpCompiler src/opcodes.def
-	./tools/OpCompiler src/Opcodes.def src/Instruction_opcode.gen.h \
+	@echo "\nGenerating products from src/Opcodes.def...\n"
+	@./tools/OpCompiler src/Opcodes.def src/Instruction_opcode.gen.h \
 		src/Instruction_getTypeName.gen.inc src/Eval_opcodes.gen.inc
+	@echo "\nDone\n"
 
 src/opcode2str.inc: src/Instruction_opcode.gen.h
 src/opcodes_eval.h: src/Instruction_opcode.gen.h
