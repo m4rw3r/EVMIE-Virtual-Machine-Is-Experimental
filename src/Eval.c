@@ -3,6 +3,7 @@
 
 #include "Eval.h"
 #include "Error.h"
+#include "Instruction.h"
 
 #define VM_DEBUG_LEVEL 0
 
@@ -52,13 +53,17 @@ CFrame_Register Eval_execFrame(Frame *srcframe)
 #define PARAM5()    instr->u.i8.p5
 #define PARAM6()    instr->u.i8.p6
 #define PARAMC()    instr->u.c
-#define INSTR_NEXT(num_params) instr++
-#define VM_NOTIMPLEMENTEDOP() \
-	fprintf(stderr, "Unhandled opcode %02x %s\n", instr->type, Instruction_getTypeName(instr));
+#define INSTR_NEXT() instr++
 
 #include "Eval_opcodes.gen.inc"
-
 		}
+		
+#if VM_DEBUG_LEVEL > 3
+		uint32_t i = 0;
+		for(; i < frame->num_vars; i++) {
+			printf("var[%d] = 0x%lx\n", i, frame->variables[i].asU);
+		}
+#endif
 	}
 	
 	end_eval:
@@ -72,5 +77,3 @@ CFrame_Register Eval_execFrame(Frame *srcframe)
 	/* TODO: Return, how? */
 	return (CFrame_Register) {.asU = 0};
 }
-
-#undef ArithmeticOp(operation)

@@ -29,7 +29,6 @@ typedef struct CFrame
 	/* Last instruction pointer */
 	const Instruction *last_instr;
 	CFrame_Register *variables;
-	struct CFrame *prev_frame;
 #if VM_PROFILE
 	/* Number of cycles spent in this CFrame */
 	uint64_t cycles;
@@ -39,8 +38,9 @@ typedef struct CFrame
 static inline CFrame *CFrame_alloc()
 {
 	/* TODO: Reuse CFrames, needs some kind of buffer for type of CFrame */
-	printf("Allocating new CFrame\n");
-	return malloc(sizeof(CFrame));
+	CFrame *tmp = malloc(sizeof(CFrame));
+	printf("Allocating new CFrame %p\n", (void *)tmp);
+	return tmp;
 }
 
 static inline void CFrame_copy(CFrame *const to, const CFrame *const from)
@@ -50,9 +50,6 @@ static inline void CFrame_copy(CFrame *const to, const CFrame *const from)
 	/* Only need to copy variables, as instructions are constant */
 	to->variables = malloc(sizeof(CFrame_Register) * from->num_vars);
 	memcpy(to->variables, from->variables, sizeof(CFrame_Register) * from->num_vars);
-	
-	/* TODO: Needed? Will most surely be overwritten just after the copy operation */
-	to->prev_frame = NULL;
 }
 
 /**
