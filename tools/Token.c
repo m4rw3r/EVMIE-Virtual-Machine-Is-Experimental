@@ -106,10 +106,9 @@ Token *Token_nextToken(SrcFile *f, int return_whitespace)
 			BUF_PUT(buf, c);
 		}
 		
-		SrcFile_count(f, c);
-		
 		if(c == '\\') {
 			if((c1 = SrcFile_getc(f)) != EOF && c1 == '\n') {
+				SrcFile_count(f, c);
 				SrcFile_count(f, c1);
 				BUF_PUT(buf, c1);
 				goto eat_macro;
@@ -118,6 +117,7 @@ Token *Token_nextToken(SrcFile *f, int return_whitespace)
 			}
 		}
 		
+		SrcFile_ungetc(f, c);
 		BUF_PUT(buf, '\0');
 		
 		return Token_Macro(buf);

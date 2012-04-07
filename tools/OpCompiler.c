@@ -10,6 +10,7 @@
 #define OPCODE_PREFIX "INSTR_"
 #define OPCODE_H_GUARD_DEFINE "INSTRUCTION_OPCODE_H"
 #define OPCODE_2_STR_FUNCNAME "Instruction_getTypeName"
+#define OPCODE_TYPE_NAME "Instruction_opcode"
 
 /**
  * Replaces the placeholder token with either one or more tokens representing the
@@ -383,9 +384,9 @@ int printStaticOpcodeDataToFile(const Opcode *opcodes, const char *filename, con
 {
 	const Opcode *o;
 	FILE *fd;
-	unsigned int num = 0;
+	unsigned int numcodes = 0;
 	
-	printf("Writing opcode enum to %s...", filename);
+	printf("Writing opcode defines to %s...", filename);
 	
 	/* TODO: Check for write success? */
 	
@@ -403,19 +404,18 @@ int printStaticOpcodeDataToFile(const Opcode *opcodes, const char *filename, con
 "#define "OPCODE_H_GUARD_DEFINE"\n\n"
 "#include <stdint.h>\n\n"
 "/* Datatype for instruction opcodes */\n"
-"typedef uint8_t Instruction_opcode;\n\n", srcfile);
+"typedef uint8_t " OPCODE_TYPE_NAME ";\n\n", srcfile);
 	
 	for(o = opcodes; o; o = o->next) {
-		fprintf(fd, "#define " OPCODE_PREFIX "%s %d\n", o->name, num);
-		num++;
+		fprintf(fd, "#define " OPCODE_PREFIX "%s %d\n", o->name, numcodes);
+		numcodes++;
 	}
 	
 	fputs("\n\n/* Number of opcode parameters */\n", fd);
 	
 	for(o = opcodes; o; o = o->next) {
 		fprintf(fd, "#define " OPCODE_PREFIX "%s_PARAMS %d\n", o->name, o->num_params);
-		/* TODO: Add a define for if an opcode has a constant second parameter (32-bit) */
-		num++;
+		/* TODO: Add a define for if an opcode has a constant third parameter (32-bit) */
 	}
 	
 	fputs("\n\n/* Opcode \"Constructor\" macros */\n\n", fd);
@@ -506,13 +506,12 @@ int printStaticOpcodeDataToFile(const Opcode *opcodes, const char *filename, con
 		}
 		
 		fputs("}\n", fd);
-		num++;
 	}
 	
 	/* TODO: Is opcode parameter size needed here? or is it enough with
 	         being hardcoded inside the generated VM switch-case? */
 	
-	printf("Done, %u opcodes written.\n", num);
+	printf("Done\n");
 	
 	fputs("\n#endif", fd);
 	fclose(fd);
@@ -525,7 +524,6 @@ int printOpcodeToStringCFile(const Opcode *opcodes, const char *filename, const 
 {
 	const Opcode *o;
 	FILE *fd;
-	unsigned int num = 0;
 	
 	printf("Writing opcode2str function to %s...", filename);
 	
@@ -550,14 +548,13 @@ int printOpcodeToStringCFile(const Opcode *opcodes, const char *filename, const 
 	for(o = opcodes; o; o = o->next) {
 		fprintf(fd, "\t\tcase " OPCODE_PREFIX "%s: return \"" OPCODE_PREFIX "%s\";\n",
 			o->name, o->name);
-		num++;
 	}
 	
 	fprintf(fd, "\t\tdefault: return \"UNKNOWN\";\n"
 		"\t}\n"
 		"}\n");
 	
-	printf("Done, %u opcodes written.\n", num);
+	printf("Done\n");
 	fclose(fd);
 	
 	return 1;
@@ -568,7 +565,6 @@ int printOpcodeLoopToFile(const Opcode *opcodes, const char *filename, const cha
 {
 	const Opcode *o;
 	FILE *fd;
-	unsigned int num = 0;
 	Token *tok;
 	
 	printf("Writing opcode switch-case body to %s...", filename);
@@ -596,10 +592,9 @@ int printOpcodeLoopToFile(const Opcode *opcodes, const char *filename, const cha
 		}
 		
 		fprintf(fd, "\nINSTR_NEXT();\nbreak;\n\n");
-		num++;
 	}
 	
-	printf("Done, %u opcodes written.\n", num);
+	printf("Done\n");
 	fclose(fd);
 	
 	return 1;
