@@ -223,8 +223,8 @@ ins PRINT(variable) {
  ********************************************/
 
 /* TODO: Maybe merge 1st variable and parameter variables? Technically the return
-         variable is a "parameter" for a specific case where the continuation is
-         only has one parameter set */
+         variable is a "parameter" for a specific case when the continuation is
+         in a state where it is accepting a single parameter to resume its execution */
 /* CFrame variables:
    0th variable is reserved for the parent in the call-stack,
    1st variable is reserved for the return value from other CFrames

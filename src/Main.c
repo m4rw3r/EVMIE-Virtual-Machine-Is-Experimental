@@ -35,7 +35,7 @@ int main()
 		INSTR_MOVE_NEW(varb, vara),         /*     a = b; */
 		INSTR_MOVE_NEW(varsum, varb),       /*     b = sum; */
 		INSTR_JMP_NEW(-6),                  /* } */
-		INSTR_CSLV_NEW(prevfr, 1, varsum),      /* Store return value (sum) */
+		INSTR_CSLV_NEW(prevfr, 1, varsum),  /* Store return value (sum) */
 		INSTR_CALL_NEW(prevfr)              /* return sum; */
 	};
 	
@@ -56,7 +56,7 @@ int main()
 	uint32_t funcfib  = Frame_allocFunction(caller_frame, fib_frame);
 	
 	/* Iterate over the fibonacci function 100 times, while asking for the count:th number */
-	Frame_setVariable(caller_frame, varmax, (CFrame_Register) {.asU = 100});
+	Frame_setVariable(caller_frame, varmax, (CFrame_Register) {.asU = 92});
 	
 	/* TODO: This code will leak memory, as the CFrames does not know when they are unused
 	   as we no longer have a call-stack which we can unwind, NEEDS TO BE FIXED SOMEHOW!!! */
@@ -65,7 +65,7 @@ int main()
 		INSTR_CALL_NEW(varfib),                  /* ret = fib(); */
 		INSTR_PRINT_NEW(varret),                 /* print ret; */
 		INSTR_SUB_NEW(varmax, varcount, varret), /* ret = max - count; */
-		INSTR_BLTZ_NEW(varret, 7),               /* if( ! (tmp < 0)) { */
+		INSTR_BLTZ_NEW(varret, 7),               /* if( ! (ret < 0)) { */
 		INSTR_CCFF_NEW(funcfib, varfib),         /*     fib = fibonacci; */
 		INSTR_CSLV_NEW(varfib, varn, varcount),
 		INSTR_CALL_NEW(varfib),                  /*     ret = fib(n = count); */
