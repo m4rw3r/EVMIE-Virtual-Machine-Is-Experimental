@@ -1,8 +1,8 @@
 
 #include <assert.h>
-#include <stdio.h>
 
 #include "Eval.h"
+#include "Error.h"
 
 #define VM_DEBUG_LEVEL 0
 
@@ -14,9 +14,7 @@ CFrame_Register Eval_execFrame(Frame *srcframe)
 	
 	if( ! srcframe->compiled_frame)
 	{
-		/* TODO: Move error handling */
-		fprintf(stderr, "ERROR: Frame 0x%016lx is not compiled!\n", (uintptr_t) srcframe);
-		exit(-1);
+		Error_fatalError("ERROR: Frame 0x%016lx is not compiled!\n", (uintptr_t) srcframe);
 	}
 	
 	register CFrame *frame = CFrame_alloc();
