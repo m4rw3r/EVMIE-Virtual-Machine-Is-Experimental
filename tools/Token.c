@@ -290,6 +290,7 @@ Token *Token_nextToken(SrcFile *f, int return_whitespace)
 		else
 		{
 			/* c == '"' */
+			BUF_PUT(buf, '\0');
 			return Token_ConstStr(buf);
 		}
 	}
