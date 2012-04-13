@@ -36,7 +36,7 @@ typedef struct Opcode
 	Token *tokens;
 } Opcode;
 
-inline Opcode *Opcode_new()
+static inline Opcode *Opcode_new()
 {
 	Opcode *opcode = malloc(sizeof(Opcode));
 	memset(opcode, 0, sizeof(Opcode));
