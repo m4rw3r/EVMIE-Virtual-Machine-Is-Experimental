@@ -29,6 +29,9 @@ typedef struct Frame
 	CFrame *compiled_frame;
 } Frame;
 
+/* TODO: Make Frame immutable once it has been compiled? Needs to be imho otherwise it might cause
+         strange behaviour when modifying running code */
+
 int Frame_compileFrame(Frame *const frame);
 
 static inline int Frame_init(Frame *const frame)
@@ -70,15 +73,15 @@ static inline int Frame_dtor(Frame *const frame)
 {
 	/* TODO: Iterate variables and do GC on pointers (or is this only in CFrames) ? */
 	
-	if(frame->compiled_frame)
-	{
-		free((Instruction *)frame->compiled_frame->cur_instr);
+	if(frame->compiled_frame) {
 		free((CFrame *)frame->compiled_frame->functions);
 		
 		CFrame_free(frame->compiled_frame);
+	} else {
+		/* Freed in CFrame_free() */
+		free(frame->variables); 
 	}
 	
-	free(frame->variables);
 	free(frame->functions);
 	free(frame->instructions);
 	

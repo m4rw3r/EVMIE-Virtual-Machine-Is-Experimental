@@ -300,6 +300,13 @@ ins CCFF(cframe, variable)
 	((CFrame *)$2.asU)->variables[0].asU = (uint64_t)frame;
 }
 
+ins CFFR(variable)
+{
+	CFrame_free((void *)$1.asU);
+}
+
+
+
 
 
 

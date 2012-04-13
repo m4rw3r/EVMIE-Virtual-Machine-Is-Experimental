@@ -63,15 +63,17 @@ int main()
 	Instruction caller[] = {
 		INSTR_CCFF_NEW(funcfib, varfib),         /* fib = fibonacci; */
 		INSTR_CALL_NEW(varfib),                  /* ret = fib(); */
+		INSTR_CFFR_NEW(varfib),
 		INSTR_PRINT_NEW(varret),                 /* print ret; */
 		INSTR_SUB_NEW(varmax, varcount, varret), /* ret = max - count; */
-		INSTR_BLTZ_NEW(varret, 7),               /* if( ! (ret < 0)) { */
+		INSTR_BLTZ_NEW(varret, 8),               /* if( ! (ret < 0)) { */
 		INSTR_CCFF_NEW(funcfib, varfib),         /*     fib = fibonacci; */
 		INSTR_CSLV_NEW(varfib, varn, varcount),
 		INSTR_CALL_NEW(varfib),                  /*     ret = fib(n = count); */
+		INSTR_CFFR_NEW(varfib),
 		INSTR_PRINT_NEW(varret),                 /*     print ret; */
 		INSTR_ADDI_NEW(varcount, varcount, 1),   /*     count = count + 1; */
-		INSTR_JMP_NEW(-7),                       /* } */
+		INSTR_JMP_NEW(-8),                       /* } */
 		INSTR_PRINT_NEW(varfib),                 /* print &fib; */
 	};
 	
@@ -80,6 +82,15 @@ int main()
 	Frame_compileFrame(caller_frame);
 	
 	Eval_execFrame(caller_frame);
+	
+	Frame_dtor(caller_frame);
+	free(caller_frame);
+	Frame_dtor(fib_frame);
+	free(fib_frame);
+	
+#ifdef LEAKCHECK_H
+	LeakCheck_printMemReport(1);
+#endif
 	
 	return 0;
 }

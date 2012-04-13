@@ -1,5 +1,6 @@
 
 #include "Frame.h"
+#include "Error.h"
 #include <stdio.h>
 
 /**
@@ -13,14 +14,19 @@ int Frame_compileFrame(Frame *const frame)
 		return 0;
 	}
 	
-	/* TODO: Alert for empty Frame? (ie. ARRAY_SIZE(frame->instructions) == 0) */
+	if(ARRAY_SIZE(frame->instructions) == 0) {
+		/* TODO: Maybe just return false? or some other status code?
+		         might be best to introduce an enum of return codes */
+		Error_fatalError("Attempted to compile frame without instructions\n");
+	}
 	
 	CFrame *cframe = CFrame_alloc();
 	
 	/* Pack the instruction array into continuous block */
 	ARRAY_PACK(frame->instructions, Instruction);
-	cframe->cur_instr  = (const Instruction*) frame->instructions;
-	cframe->last_instr = &cframe->cur_instr[ARRAY_SIZE(frame->instructions) - 1];
+	cframe->first_instr = (const Instruction*) frame->instructions;
+	cframe->cur_instr   = (const Instruction*) frame->instructions;
+	cframe->last_instr  = &cframe->first_instr[ARRAY_SIZE(frame->instructions) - 1];
 	
 	uint32_t i;
 	CFrame *related_frames = malloc(sizeof(CFrame) * ARRAY_SIZE(frame->functions));

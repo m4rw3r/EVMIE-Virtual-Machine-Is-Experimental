@@ -2,6 +2,7 @@
 #define INSTRUCTION_H 1
 
 #include <stdint.h>
+#include "StaticAssert.h"
 #include "Instruction_opcode.gen.h"
 
 typedef union Instruction_param {
@@ -29,6 +30,9 @@ typedef struct Instruction {
 	Instruction_param p1;
 	Instruction_opcode type;
 } Instruction;
+
+StaticAssert(sizeof(Instruction_param) == 1, "Instruction_param struct is not 8 bit large.");
+StaticAssert(sizeof(Instruction) == 8, "Instruction struct is not 64 bit large.");
 
 char *Instruction_getTypeName(const Instruction *const instr);
 
