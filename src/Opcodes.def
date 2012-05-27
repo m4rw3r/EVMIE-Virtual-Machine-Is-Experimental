@@ -17,74 +17,85 @@ ins END()
 	goto end_eval;
 }
 
+/* TODO: Make all comparisons produce boolean results */
+/* TODO: Modify the OpCompiler so that Value_fromInt32 and similar not be called */
+
 /* TODO: arithmetic variants which alert on overflow? */
 /* TODO: Float operations (double) */
 
 /* Immediates (constant 2nd parameters) */
-ins ADDI(variable, variable, const int)
+ins ADDI(variable int, variable, const int)
 {
-	$2.asI = $1.asI + $3;
+	$2 = Value_fromInt32($1 + $3);
 }
 
-ins SLTI(variable, variable, const int)
+ins SLTI(variable int, variable, const int)
 {
-	$2.asI = $1.asI < (int64_t) $3;
+	$2 = Value_fromInt32($1 < (int32_t) $3);
 }
 
 /* Unsigned comparison */
-ins SLTIU(variable, variable, const uint)
+ins SLTIU(variable uint, variable, const uint)
 {
-	$2.asI = $1.asU < (uint64_t) $3;
+	$2 = Value_fromInt32($1 < (uint32_t) $3);
 }
 
 ins ANDI(variable, variable, const uint)
 {
-	$2.asU = $1.asU & (uint64_t) $3;
+	$2.asBits = $1.asBits & (uint64_t) $3;
 }
 
 ins ORI(variable, variable, const uint)
 {
-	$2.asU = $1.asU | (uint64_t) $3;
+	$2.asBits = $1.asBits | (uint64_t) $3;
 }
 
 ins XORI(variable, variable, const uint)
 {
-	$2.asU = $1.asU ^ (uint64_t) $3;
+	$2.asBits = $1.asBits ^ (uint64_t) $3;
 }
 
 ins LI(variable, undef, const uint) {
 	/* Sets the lower 32 bits of variable */
-	$1.asU = ($1.asU & ((uint64_t)UINT32_MAX << 32)) | (uint64_t) $3;
+	$1.asBits = ($1.asBits & ((uint64_t)UINT32_MAX << 32)) | (uint64_t) $3;
 }
 
 ins LUI(variable, undef, const uint)
 {
+	/* Set upper 32 bits while discarding the lower 32 bits (set to 0) */
+	$1.asBits = (((uint64_t) $3) << (uint64_t) 32);
+}
+
+ins LUIP(variable, undef, const uint)
+{
 	/* Set upper 32 bits while preserving the lower 32 bits */
-	$1.asU = (((uint64_t) $3) << (uint64_t) 32) | ($1.asU & UINT32_MAX);
+	/* TODO: Do we really need to preserve the lower bits? can't we just set them to 0?
+	   the lower bits can easily be set later on with ORI */
+	$1.asBits = (((uint64_t) $3) << (uint64_t) 32) | ($1.asBits & UINT32_MAX);
 }
 
 ins MOVE(variable, variable) {
-	$2.asU = $1.asU;
+	$2.asBits = $1.asBits;
 }
 
 /* Arithmetic */
-ins ADD(variable, variable, variable)
+ins ADD(variable int, variable int, variable)
 {
-	$3.asI = $1.asI + $2.asI;
+	$3 = Value_fromInt32($1 + $2);
 }
 
-ins SUB(variable, variable, variable)
+ins SUB(variable int, variable int, variable)
 {
-	$3.asI = $1.asI - $2.asI;
+	$3 = Value_fromInt32($1 - $2);
 }
 
-ins SLT(variable, variable, variable)
+ins SLT(variable, variable int, variable int)
 {
-	$1.asI = $2.asI < $3.asI;
+	$1 = Value_fromInt32($2 < $3);
 }
 
 /* Unsigned comparison */
-ins SLTU(variable, variable, variable)
+/*ins SLTU(variable, variable, variable)
 {
 	$1.asI = $2.asU < $3.asU;
 }
@@ -117,28 +128,29 @@ ins SLL(variable, variable, uint)
 ins SRL(variable, variable, uint)
 {
 	$1.asU = $2.asU >> $3;
-}
+}*/
 
-ins SRA(variable, variable, int)
+ins SRA(variable, variable int, int)
 {
 	/* TODO: Hopefully this will result in arithmetic shift, implementation dependent */
-	$1.asI = $2.asI >> $3;
+	$1 = Value_fromInt32($2 >> $3);
 }
 
-ins SLLV(variable, variable, variable)
+ins SLLV(variable, variable uint, variable uint)
 {
-	$1.asU = $2.asU << $3.asU;
+	$1 = Value_fromUInt32($2 << $3);
 }
 
-ins SRLV(variable, variable, variable)
+ins SRLV(variable, variable uint, variable uint)
 {
-	$1.asU = $2.asU >> $3.asU;
+	$1 = Value_fromUInt32($2 >> $3);
 }
 
-ins SRAV(variable, variable, variable)
+ins SRAV(variable, variable int, variable int)
 {
-	/* TODO: Hopefully this will result in arithmetic shift, implementation dependent */
-	$1.asI = $2.asI >> $3.asI;
+	/* TODO: Hopefully this will result in arithmetic shift, implementation dependent
+	         on signed int implementation */
+	$1 = Value_fromInt32($2 >> $3);
 }
 
 ins JMP(undef, undef, const int)
@@ -153,16 +165,16 @@ ins JMP(undef, undef, const int)
 /* TODO: Needed? The variables does not know how the instructions are arranged at the moment */
 /* TODO: Jump bounds-checking? Eval-loop currently automatically checks for instruction end,
          but not for instruction start, maybe pointer to start needed too? */
-ins JMPR(variable)
+ins JMPR(variable int)
 {
-	assert($1.asI != 0);
-	instr += $1.asI;
+	assert($1 != 0);
+	instr += $1;
 	continue;
 }
 
 ins BEQ(variable, variable, const int)
 {
-	if($1.asI == $2.asI) {
+	if($1.asBits == $2.asBits) {
 		assert($3 != 0);
 		instr += $3;
 		continue;
@@ -171,25 +183,25 @@ ins BEQ(variable, variable, const int)
 
 ins BNE(variable, variable, const int)
 {
-	if($1.asI != $2.asI) {
+	if($1.asBits != $2.asBits) {
 		assert($3 != 0);
 		instr += $3;
 		continue;
 	}
 }
 
-ins BLTZ(variable, undef, const int)
+ins BLTZ(variable int, undef, const int)
 {
-	if($1.asI < 0) {
+	if($1 < 0) {
 		assert($3 != 0);
 		instr += $3;
 		continue;
 	}
 }
 
-ins BLEZ(variable, undef, const int)
+ins BLEZ(variable int, undef, const int)
 {
-	if($1.asI <= 0) {
+	if($1 <= 0) {
 		assert($3 != 0);
 		instr += $3;
 		continue;
@@ -215,7 +227,7 @@ ins BGEZ(variable, undef, const int)
 }*/
 
 ins PRINT(variable) {
-	printf("0x%llx\n", $1.asU);
+	printf("0x%lx\n", $1.asBits);
 }
 
 /********************************************
@@ -249,12 +261,12 @@ ins PRINT(variable) {
    also includes incrementing the current instruction pointer by one to avoid
    jumping back to the CCALL if the called continuation bothers to return control
    to us */
-ins CALL(variable)
+ins CALL(variable cframe)
 {
 	/* TODO: Any type of type-checking here? we could jump anywhere */
-	CFrame *next = (CFrame *)$1.asU;
+	CFrame *next = $1;
 #if VM_DEBUG_LEVEL > 2
-	printf("Calling CFrame in %lx\n", $1.asU);
+	printf("Calling CFrame in %lx\n", (void*)next);
 #endif
 	
 	INSTR_NEXT();
@@ -269,9 +281,9 @@ ins CALL(variable)
    This is used to pass parameters to other continuations, but also to return values */
 ins CSLV(variable, uint, variable)
 {
-	((CFrame *)$1.asU)->variables[$2].asU = $3.asU;
+	((CFrame *)Value_getPointer($1))->variables[$2] = $3;
 #if VM_DEBUG_LEVEL > 2
-	printf("Stored %lx in %d, CFrame %lx\n", ((CFrame *)$1.asU)->variables[$2].asU, $2, $1.asU);
+	printf("Stored %lx in %d, CFrame %lx\n", ((CFrame *)$1.asU)->variables[$2].asBits, $2, $1.asBits);
 #endif
 }
 
@@ -290,19 +302,29 @@ ins CSLV(variable, uint, variable)
 ins CCFF(cframe, variable)
 {
 	/* TODO: Reuse/allocate CFrames + variables array on internal heap */
-	$2.asU = (uint64_t) CFrame_alloc();
-	CFrame_copy((CFrame *)$2.asU, &$1);
+	$2 = Value_fromPointer(CFrame_alloc());
+	CFrame_copy((CFrame *)Value_getPointer($2), &$1);
 #if VM_DEBUG_LEVEL > 2
 	printf("Stored CFrame as %lx\n", $2.asU);
 #endif
 	
 	/* TODO: Is this ok? Setting the 0th variable to current continuation by default? */
-	((CFrame *)$2.asU)->variables[0].asU = (uint64_t)frame;
+	((CFrame *)Value_getPointer($2))->variables[0] = Value_fromPointer(frame);
 }
 
-ins CFFR(variable)
+/* Continuation Reset Instruction Pointer (continuation)
+   Resets the instruction pointer to the first_instr pointer in the CFrame,
+   allowing for easy reuse of a continuation.
+   */
+ins CRIP(variable cframe)
 {
-	CFrame_free((void *)$1.asU);
+	/* TODO: Useful/needed? */
+	$1->cur_instr = $1->first_instr;
+}
+
+ins CFFR(variable cframe)
+{
+	CFrame_free($1);
 }
 
 

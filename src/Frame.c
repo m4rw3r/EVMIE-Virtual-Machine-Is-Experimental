@@ -42,9 +42,9 @@ int Frame_compileFrame(Frame *const frame)
 	
 	/* Realloc the variables array, to make for less memory allocated for each frame
 	   when running */
-	ARRAY_PACK(frame->variables, CFrame_Register);
+	ARRAY_PACK(frame->variables, Value);
 	cframe->variables = frame->variables;
-	cframe->num_vars  = ARRAY_SIZE(frame->variables);
+	cframe->variables_num = ARRAY_SIZE(frame->variables);
 	
 	frame->compiled_frame = cframe;
 	

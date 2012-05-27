@@ -10,13 +10,8 @@
 #include "StaticAssert.h"
 #include "config.h"
 #include "Instruction.h"
-
-typedef union CFrame_Register {
-	uint64_t asU;
-	int64_t  asI;
-	double   asF;
-} CFrame_Register;
 #include "Object.h"
+#include "Value.h"
 
 struct CFrame;
 
@@ -37,8 +32,6 @@ typedef struct CFrame
 #endif
 } CFrame;
 
-StaticAssert(sizeof(CFrame_Register) == 8, "CFrame_Register struct is not 64 bit large.");
-
 static inline CFrame *CFrame_alloc()
 {
 	/* TODO: Reuse CFrames, needs some kind of buffer for type of CFrame */
@@ -50,11 +43,12 @@ static inline CFrame *CFrame_alloc()
 
 static inline void CFrame_copy(CFrame *const to, const CFrame *const from)
 {
+	/* TODO: Proper object copy with function pointer? */
 	memcpy(to, from, sizeof(CFrame));
 	
 	/* Only need to copy variables, as instructions are constant */
-	to->variables = malloc(sizeof(CFrame_Register) * from->num_vars);
-	memcpy(to->variables, from->variables, sizeof(CFrame_Register) * from->num_vars);
+	to->variables = malloc(sizeof(Value) * from->variables_num);
+	memcpy(to->variables, from->variables, sizeof(Value) * from->variables_num);
 }
 
 /**
@@ -92,24 +86,24 @@ static inline void CFrame_decRefc(CFrame *const frame)
 	
 	
 	if(frame->refcount == 0) {
-		if(frame->variables[0].asU != 0) {
-			CFrame_decRefc((CFrame *)frame->variables[0].asU);
+		if(Value_getPointer(frame->variables[0]) != 0) {
+			CFrame_decRefc((CFrame *)Value_getPointer(frame->variables[0]));
 		}
 		
 		CFrame_free(frame);
 	}
 }
 
-static inline CFrame_Register CFrame_getVariable(const CFrame *const frame, const uint16_t variable)
+static inline Value CFrame_getVariable(const CFrame *const frame, const uint16_t variable)
 {
-	assert(variable < frame->num_vars);
+	assert(variable < frame->variables_num);
 	
 	return frame->variables[variable];
 }
 
-static inline void CFrame_setVariable(const CFrame *const frame, const uint16_t variable, const CFrame_Register value)
+static inline void CFrame_setVariable(const CFrame *const frame, const uint16_t variable, const Value value)
 {
-	assert(variable < frame->num_vars);
+	assert(variable < frame->variables_num);
 	
 	frame->variables[variable] = value;
 }

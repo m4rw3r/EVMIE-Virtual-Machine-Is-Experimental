@@ -13,19 +13,21 @@ int main()
 	Frame *fib_frame = malloc(sizeof(Frame));
 	Frame_init(fib_frame);
 	
-	uint32_t prevfr = Frame_allocVariable(fib_frame);
+	var_index prevfr = Frame_allocVariable(fib_frame);
 	/* No continuations called here, so we can get away with not allocating space for return values */
-	uint32_t varsum = Frame_allocVariable(fib_frame);
-	uint32_t varn   = Frame_allocVariable(fib_frame);
-	uint32_t vara   = Frame_allocVariable(fib_frame);
-	uint32_t varb   = Frame_allocVariable(fib_frame);
-	uint32_t vari   = Frame_allocVariable(fib_frame);
-	uint32_t vartmp = Frame_allocVariable(fib_frame);
+	var_index varsum = Frame_allocVariable(fib_frame);
+	var_index varn   = Frame_allocVariable(fib_frame);
+	var_index vara   = Frame_allocVariable(fib_frame);
+	var_index varb   = Frame_allocVariable(fib_frame);
+	var_index vari   = Frame_allocVariable(fib_frame);
+	var_index vartmp = Frame_allocVariable(fib_frame);
 	
-	/* Set default value, if not set defaults to 0 */
-	Frame_setVariable(fib_frame, varn, (CFrame_Register) {.asU = 20});
+	/* Set default value, if not set defaults to C-NULL */
+	Frame_setVariable(fib_frame, varn, Value_fromInt32(20));
 	/* Initial value for variable */
-	Frame_setVariable(fib_frame, varb, (CFrame_Register) {.asU = 1});
+	Frame_setVariable(fib_frame, vara, Value_fromInt32(0));
+	Frame_setVariable(fib_frame, vari, Value_fromInt32(0));
+	Frame_setVariable(fib_frame, varb, Value_fromInt32(1));
 	
 	Instruction instrs[] = {
 		INSTR_SUB_NEW(varn, vari, vartmp),  /* tmp = n - i; */
@@ -47,16 +49,17 @@ int main()
 	Frame *caller_frame = malloc(sizeof(Frame));
 	Frame_init(caller_frame);
 	
-	uint32_t prevfr2  = Frame_allocVariable(caller_frame); /* not used right now, dummy */
-	uint32_t varret   = Frame_allocVariable(caller_frame);
-	uint32_t varcount = Frame_allocVariable(caller_frame);
-	uint32_t varmax   = Frame_allocVariable(caller_frame);
-	uint32_t varfib   = Frame_allocVariable(caller_frame);
+	var_index prevfr2  = Frame_allocVariable(caller_frame); /* not used right now, dummy */
+	var_index varret   = Frame_allocVariable(caller_frame);
+	var_index varcount = Frame_allocVariable(caller_frame);
+	var_index varmax   = Frame_allocVariable(caller_frame);
+	var_index varfib   = Frame_allocVariable(caller_frame);
 	
-	uint32_t funcfib  = Frame_allocFunction(caller_frame, fib_frame);
+	var_index funcfib  = Frame_allocFunction(caller_frame, fib_frame);
 	
 	/* Iterate over the fibonacci function 100 times, while asking for the count:th number */
-	Frame_setVariable(caller_frame, varmax, (CFrame_Register) {.asU = 92});
+	Frame_setVariable(caller_frame, varmax, Value_fromInt32(30));
+	Frame_setVariable(caller_frame, varcount, Value_fromInt32(0));
 	
 	/* TODO: This code will leak memory, as the CFrames does not know when they are unused
 	   as we no longer have a call-stack which we can unwind, NEEDS TO BE FIXED SOMEHOW!!! */

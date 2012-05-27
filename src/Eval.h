@@ -4,6 +4,6 @@
 #include "Frame.h"
 #include "CFrame.h"
 
-CFrame_Register Eval_execFrame(Frame *frame);
+Value Eval_execFrame(Frame *frame);
 
 #endif

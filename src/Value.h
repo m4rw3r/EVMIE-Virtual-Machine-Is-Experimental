@@ -2,6 +2,7 @@
 #define VALUE_H 1
 
 #include "config.h"
+#include "StaticAssert.h"
 
 /* uint64_t and uintptr_t */
 #include <inttypes.h>
@@ -53,6 +54,8 @@ typedef union Value
 	VALUE_PTR_T asBits;
 } Value;
 
+StaticAssert(sizeof(Value) == 8, "Value is not 64-bit large");
+
 /*                      0x   c   8   4   0 */
 #define Value_PtrMask   0x0000FFFFFFFFFFFF
 #define Value_Int32Tag  0x0001000100000000
@@ -79,19 +82,26 @@ static inline Value Value_fromInt32(const int32_t number)
 	return (Value) {.asBits = (VALUE_PTR_T)(((uint32_t) number) | Value_Int32Tag)};
 }
 
+static inline Value Value_fromUInt32(const uint32_t number)
+{
+	return (Value) {.asBits = (VALUE_PTR_T)(number | Value_Int32Tag)};
+}
+
 static inline Value Value_fromDouble(const double number)
 {
-	int32_t asInt32 = (int32_t)number;
+	/* TODO: Remove this Double -> int conversion completely? */
+	/*int32_t asInt32 = (int32_t)number;
 	
 	// if the double can be losslessly stored as an int32 do so
 	// (int32 doesn't have -0, so check for that too)
 	if (number == asInt32 && ! ((number == 0 && *(VALUE_PTR_T *)(&number) != 0))) {
 		return Value_fromInt32(asInt32);
-	}
+	}*/
 	
 	return (Value){.asBits = ((Value) {.asDouble = number}.asBits) + Value_MinDouble};
 }
 
+/* TODO: Move into object code */
 static inline Value Value_fromString(const char *str, const int len)
 {
 	Value_CString *cstr = malloc(sizeof(Value_CString));
@@ -141,6 +151,13 @@ static inline int32_t Value_getInt32(const Value value)
 	assert(Value_isInt32(value));
 	
 	return (int32_t) (value).asBits;
+}
+
+static inline uint32_t Value_getUInt32(const Value value)
+{
+	assert(Value_isInt32(value));
+	
+	return (uint32_t) (value).asBits;
 }
 
 static inline int Value_getBool(const Value value)

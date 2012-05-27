@@ -7,9 +7,9 @@
 
 #define VM_DEBUG_LEVEL 0
 
-CFrame_Register Eval_execFrame(Frame *srcframe)
+Value Eval_execFrame(Frame *srcframe)
 {
-	register CFrame_Register *values;
+	register Value *values;
 	register const Instruction *instr;
 	register const Instruction *last_instr;
 	
@@ -42,8 +42,6 @@ CFrame_Register Eval_execFrame(Frame *srcframe)
 		switch(instr->type)
 		{
 
-#define VM_VAR1     VM_VAR(PARAM(1).asUInt)
-#define VM_VAR2     VM_VAR(PARAM(2).asUInt)
 #define VM_VAR(var) values[(var)]
 #define VM_VAL      last_value
 #define PARAM1()    instr->p1
@@ -61,7 +59,7 @@ CFrame_Register Eval_execFrame(Frame *srcframe)
 #if VM_DEBUG_LEVEL > 3
 		uint32_t i = 0;
 		for(; i < frame->num_vars; i++) {
-			printf("var[%d] = 0x%lx\n", i, frame->variables[i].asU);
+			printf("var[%d] = 0x%lx\n", i, frame->variables[i].asBits);
 		}
 #endif
 	}
@@ -75,5 +73,5 @@ CFrame_Register Eval_execFrame(Frame *srcframe)
 #endif
 	
 	/* TODO: Return, how? */
-	return (CFrame_Register) {.asU = 0};
+	return (Value) {.asBits = 0};
 }
