@@ -28,10 +28,13 @@ const char *Opcode_paramType2str(Opcode_ParamType type)
 		case PARAM_UNDEF:
 		return "undef";
 		case PARAM_INTEGER:
+		case PARAM_VARINT:
 		return "int";
 		case PARAM_UINT:
+		case PARAM_VARUINT:
 		return "uint";
 		case PARAM_CFRAMEID:
+		case PARAM_VARCFRAME:
 		return "cframe";
 		default:
 		return "null";

@@ -13,6 +13,28 @@
 #define OPCODE_TYPE_NAME "Instruction_opcode"
 
 /**
+ * Copies the supplied template string and then replaces the first '@' with
+ * '0' + varnum, resulting pointer is returned. It will validate that varnum is < 10.
+ */
+static inline char *copyStrReplace(const char *template, int varnum)
+{
+	char *pos;
+	char *data;
+	
+	assert(varnum < 10);
+	
+	data = malloc(strlen(template) + 1);
+	memcpy(data, template, strlen(template) + 1);
+	
+	pos = strchr(data, '@');
+	if(pos != NULL) {
+		*pos = '0' + varnum;
+	}
+	
+	return data;
+}
+
+/**
  * Replaces the placeholder token with either one or more tokens representing the
  * finished C code.
  * 
@@ -41,68 +63,52 @@ int expandPlaceholder(Opcode *op, Token **placeholder, Token **list_end, SrcFile
 			goto error_param_placeholder;
 		}
 		
-		assert(l < 10);
-		
-		char *pos;
-		char *data;
-		
 		switch(op->params[l - 1])
 		{
+			case PARAM_VARINT:
+			{
+				replacement = Token_Identifier(copyStrReplace("Value_getInt32(VM_VAR(PARAM@().asU))", l));
+				break;
+			}
+			case PARAM_VARUINT:
+			{
+				replacement = Token_Identifier(copyStrReplace("Value_getUInt32(VM_VAR(PARAM@().asU))", l));
+				break;
+			}
+			case PARAM_VARCFRAME:
+			{
+				replacement = Token_Identifier(copyStrReplace("((CFrame *) Value_getPointer(VM_VAR(PARAM@().asU)))", l));
+				break;
+			}
 			case PARAM_VARIABLE:
 			{
-				const char *template = "VM_VAR(PARAM@().asU)";
-				data = malloc(strlen(template) + 1);
-				memcpy(data, template, strlen(template) + 1);
-				pos = strchr(data, '@');
-				*pos = '0' + l;
-				replacement = Token_Identifier(data);
+				replacement = Token_Identifier(copyStrReplace("VM_VAR(PARAM@().asU)", l));
 				break;
 			}
 			case PARAM_CFRAMEID:
 			{
-				const char *template = "frame->functions[PARAM@().asU]";
-				data = malloc(strlen(template) + 1);
-				memcpy(data, template, strlen(template) + 1);
-				pos = strchr(data, '@');
-				*pos = '0' + l;
-				replacement = Token_Identifier(data);
+				replacement = Token_Identifier(copyStrReplace("frame->functions[PARAM@().asU]", l));
 				break;
 			}
 			case PARAM_INTEGER:
 			{
-				const char *template = "PARAM@().asI";
-				data = malloc(strlen(template) + 1);
-				memcpy(data, template, strlen(template) + 1);
-				pos = strchr(data, '@');
-				*pos = '0' + l;
-				replacement = Token_Identifier(data);
+				replacement = Token_Identifier(copyStrReplace("PARAM@().asI", l));
 				break;
 			}
 			case PARAM_UINT:
 			{
-				const char *template = "PARAM@().asU";
-				data = malloc(strlen(template) + 1);
-				memcpy(data, template, strlen(template) + 1);
-				pos = strchr(data, '@');
-				*pos = '0' + l;
-				replacement = Token_Identifier(data);
+				replacement = Token_Identifier(copyStrReplace("PARAM@().asU", l));
 				break;
 			}
 			/* Parameter constants */
 			case PARAM_CONST_INT:
 			{
-				const char *template = "PARAMC().asI";
-				data = malloc(strlen(template) + 1);
-				memcpy(data, template, strlen(template) + 1);
-				replacement = Token_Identifier(data);
+				replacement = Token_Identifier(copyStrReplace("PARAMC().asI", 0));
 				break;
 			}
 			case PARAM_CONST_UINT:
 			{
-				const char *template = "PARAMC().asU";
-				data = malloc(strlen(template) + 1);
-				memcpy(data, template, strlen(template) + 1);
-				replacement = Token_Identifier(data);
+				replacement = Token_Identifier(copyStrReplace("PARAMC().asU", 0));
 				break;
 			}
 			default:
@@ -216,6 +222,7 @@ opcode_parameter:
 	
 	tok = Token_nextToken(fp, 0);
 	
+	/* Check syntax, and also move on to next section: */
 	if(tok->type == T_RPAREN) {
 		/* We have a comma without a variable after it */
 		if(op_param_idx != 0 && opcode->params[op_param_idx] == 0) {
@@ -227,6 +234,7 @@ opcode_parameter:
 		
 		goto opcode_body;
 	} else if(tok->type == T_COMMA) {
+		/* Next comma, if parameter not set, error */
 		if(opcode->params[op_param_idx] == 0) {
 			goto unexpected_token;
 		}
@@ -242,8 +250,9 @@ opcode_parameter:
 		goto unexpected_number_of_params;
 	}
 	
-	/* To avoid "int uint" stuff overwriting previous stuff */
-	if(opcode->params[op_param_idx] & ~PARAM_CONST) {
+	/* To avoid "int uint" stuff overwriting previous stuff,
+	   only "variable" and "const" are allowed to "enhance" types */
+	if(opcode->params[op_param_idx] & ~(PARAM_CONST | PARAM_VARIABLE)) {
 		goto unexpected_token;
 	}
 	
@@ -368,6 +377,8 @@ free_opcodes_and_return:
 		opcode = next;
 	}
 	
+	/* TODO: Free the macros too */
+	
 	SrcFile_free(fp);
 	
 	return NULL;
@@ -406,6 +417,7 @@ int printStaticOpcodeDataToFile(const Opcode *opcodes, const char *filename, con
 "/* Datatype for instruction opcodes */\n"
 "typedef uint8_t " OPCODE_TYPE_NAME ";\n\n", srcfile);
 	
+	/* Opcode id defines */
 	for(o = opcodes; o; o = o->next) {
 		fprintf(fd, "#define " OPCODE_PREFIX "%s %d\n", o->name, numcodes);
 		numcodes++;
@@ -413,6 +425,7 @@ int printStaticOpcodeDataToFile(const Opcode *opcodes, const char *filename, con
 	
 	fputs("\n\n/* Number of opcode parameters */\n", fd);
 	
+	/* Number of parameters for each opcode */
 	for(o = opcodes; o; o = o->next) {
 		fprintf(fd, "#define " OPCODE_PREFIX "%s_PARAMS %d\n", o->name, o->num_params);
 		/* TODO: Add a define for if an opcode has a constant third parameter (32-bit) */
@@ -485,11 +498,16 @@ int printStaticOpcodeDataToFile(const Opcode *opcodes, const char *filename, con
 				
 				switch(o->params[i] & ~PARAM_CONST) {
 					case PARAM_INTEGER:
+					case PARAM_CONST_INT:
 						fputs(".asI", fd);
 						break;
 					case PARAM_UINT:
 					case PARAM_VARIABLE:
 					case PARAM_CFRAMEID:
+					case PARAM_CONST_UINT:
+					case PARAM_VARINT:
+					case PARAM_VARUINT:
+					case PARAM_VARCFRAME:
 						fputs(".asU", fd);
 						break;
 				}
